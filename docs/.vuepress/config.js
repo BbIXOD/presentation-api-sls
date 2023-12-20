@@ -76,7 +76,7 @@ module.exports = {
 
     lastUpdated: false, // string | boolean
       // Assumes GitHub. Can also be a full GitLab url.
-    repo: 'https://github.com/Dmutre/edu_db_labs-IM-21',
+    repo: 'https://github.com/BbIXOD/edu_db_labs-IM-21',
     // Customising the header label
     // Defaults to "GitHub"/"GitLab"/"Bitbucket" depending on `themeConfig.repo`
     repoLabel: 'Github',
@@ -88,7 +88,7 @@ module.exports = {
     // if your docs are not at the root of the repo:
     docsDir: 'docs',
     // if your docs are in a specific branch (defaults to 'master'):
-    docsBranch: 'master',
+    docsBranch: 'aws-variant',
     // defaults to false, set to true to enable
     // editLinks: true,
     // custom text for edit link. Defaults to "Edit this page"
@@ -96,7 +96,7 @@ module.exports = {
 
   },
   title: '2. Система управління відкритими даними',
-  description: 'Лабораторні роботи з дисципліни "Організація баз даних"',
+  description: 'Презентація з дисципліни "Організація баз даних"',
   configureWebpack: {
     resolve: {
       alias: {
