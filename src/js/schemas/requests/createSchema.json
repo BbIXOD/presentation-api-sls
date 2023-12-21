@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "Post_id": { "type": "number" }
+  },
+  "required": ["name", "description", "Post_id"]
+}

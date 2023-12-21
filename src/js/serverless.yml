@@ -1,0 +1,129 @@
+service: sls-db
+
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: eu-central-1
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*"
+  environment:
+    DB_NAME: ${self:custom.DB_NAME}
+    DB_USER: ${self:custom.DB_USER}
+    DB_HOST: ${self:custom.DB_HOST}
+    DB_PORT: ${self:custom.DB_PORT}
+    DB_PASSWORD: ${self:custom.DB_PASSWORD}
+
+
+custom:
+  DB_NAME: mydb
+  DB_USER: admin
+  DB_PASSWORD: strongpassword
+  DB_HOST: 
+    Fn::GetAtt:
+      - MyDB
+      - Endpoint.Address
+  DB_PORT: 
+    Fn::GetAtt:
+      - MyDB
+      - Endpoint.Port
+
+
+package:
+  individually: true
+
+plugins:
+  - serverless-plugin-include-dependencies
+  - serverless-plugin-common-excludes
+
+configValidationMode: error
+
+
+functions:
+  test:
+    handler: dist/functions/test.handler
+    events:
+      - http:
+          path: /test
+          method: get
+
+  init:
+    handler: dist/functions/init.handler
+    events:
+      - http:
+          path: /init
+          method: get
+          cors: true
+    package:
+      patterns:
+        - resources/mydb.sql
+  
+  getEnv:
+    handler: dist/functions/getEnv.handler
+    events:
+      - http:
+          path: /env
+          method: get
+
+  get-all:
+    handler: dist/functions/getAll.handler
+    events:
+      - http:
+          path: /category
+          method: get
+
+  get-by-id:
+    handler: dist/functions/getById.handler
+    events:
+      - http:
+          path: /category/{id}
+          method: get
+  
+  create:
+    handler: dist/functions/create.handler
+    events:
+      - http:
+          path: /category
+          method: post
+          request:
+            schemas:
+              application/json: ${file(schemas/requests/createSchema.json)}
+
+  extend:
+    handler: dist/functions/extend.handler
+    events:
+      - http:
+          path: /category/extend
+          method: post
+          request:
+            schemas:
+              application/json: ${file(schemas/requests/extendSchema.json)}
+
+  modify:
+    handler: dist/functions/modify.handler
+    events:
+      - http:
+          path: /category/{id}
+          method: patch
+          request:
+            schemas:
+              application/json: ${file(schemas/requests/modifySchema.json)}
+
+  delete:
+    handler: dist/functions/delete.handler
+    events:
+      - http:
+          path: /category/{id}
+          method: delete
+
+
+resources:
+  Resources:
+    MyDB: ${file(resources/database.yml)}
+    MyAccessPolicy: ${file(resources/accessPolicy.yml)}

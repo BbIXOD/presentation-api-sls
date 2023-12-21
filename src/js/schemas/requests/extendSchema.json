@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "Category_id": { "type": "number" },
+    "Post_id": { "type": "number" }
+  },
+  "required": ["Category_id", "Post_id"]
+}

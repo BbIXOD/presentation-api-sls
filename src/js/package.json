@@ -1,0 +1,42 @@
+{
+  "name": "aws-api",
+  "version": "1.0.0",
+  "description": "Simple restfull service made with js ts aws sls and some db",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "node ./esbuild.conf.mjs && serverless deploy --stage dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BbIXOD/edu_db_labs-IM-21.git#aws-variant"
+  },
+  "keywords": [
+    "aws",
+    "api",
+    "testing",
+    "cool",
+    "best",
+    "lab6",
+    "presentation",
+    "coursework"
+  ],
+  "author": "Паукач",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BbIXOD/edu_db_labs-IM-21/issues"
+  },
+  "homepage": "https://github.com/BbIXOD/edu_db_labs-IM-21/tree/aws-variant#readme",
+  "dependencies": {
+    "@types/aws-lambda": "^8.10.130",
+    "@types/serverless": "^3.12.19",
+    "esbuild": "^0.19.9",
+    "esbuild-node-externals": "^1.11.0",
+    "mysql2": "^3.6.5",
+    "serverless": "^3.38.0",
+    "serverless-plugin-common-excludes": "^4.0.0",
+    "serverless-plugin-include-dependencies": "^5.1.0",
+    "typescript": "^5.3.3"
+  }
+}
