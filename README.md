@@ -24,3 +24,218 @@
 - package-lock.json // ну, це в нас для безпеки версій пакетів, створювати не треба
 - serverless.yml // серце нашого проєкту. Тому, бажано розібратись в синтаксисі цього розширення. Дані з нього напряму впливатимуть на те, що буде створено й зроблено. Фактично, все те саме можна зробити й без нього, але нащо тоді serverless.
 - tsconfig.json // налаштування компіляції. якщо використовуєте esbuild, то можете просто створити й переписати мої 2 строчки, якщо ні, то варто виконати команду `npx tsc init` і файл з'явиться. Або, простостворіть і заповніть, ваша справа.
+
+## Ініціалізація serverless, робота з severless.yml
+Так, у нас є готові файли, тепер, власне, потрібно розробити проєкт. Акцент я буду робити саме на особливостях serverless, а не на функціях, адже вони будуть схожі на те, що робиться в інших фреймворках.
+
+Для початку нам потрібно написати `npx sls`. Тут потрібно буде ввести дані акаунту, тому коли ви щось створюєте, наприклад iam користувача, десь зберігайте секретний ключ. або кожного разу робіть новий. Там все просто написано, не заплутаєтесь.
+
+Далі ми працюємо з вже з yml файлом. Давайте подивимось як він виглядає у мене й на прикладі розберемо структуру.
+
+```service: sls-db```
+Назва сервісу іде окремо і її ви придумуєте на власний розсуд.
+
+```
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: eu-central-1
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*"
+  environment:
+    DB_NAME: ${self:custom.DB_NAME}
+    DB_USER: ${self:custom.DB_USER}
+    DB_HOST: ${self:custom.DB_HOST}
+    DB_PORT: ${self:custom.DB_PORT}
+    DB_PASSWORD: ${self:custom.DB_PASSWORD
+```
+В секції провайдер ми надаємо відомості про наш проєкт, такі як хто надає (у нас завжди aws), середовище виконання (адже serverless може працювати з іншими версіями node а також мовами), регіон (список регіонів є на сайті, їх досить багато, але формат запису ви бачите), стадія річ неважлива, поки не дивіться на неї, оточення дозволяє додавати змінні до process.env без сторонніх бібліотек.
+
+```
+custom:
+  DB_NAME: mydb
+  DB_USER: admin
+  DB_PASSWORD: strongpassword
+  DB_HOST: 
+    Fn::GetAtt:
+      - MyDB
+      - Endpoint.Address
+  DB_PORT: 
+    Fn::GetAtt:
+      - MyDB
+      - Endpoint.Port
+```
+Секція custom сама по собі ні за що не відповідає, може використовуватись як місце для оголошення змінних. Також використовується деякими плагінами.
+
+```
+package:
+  individually: true
+```
+`package`... відповідає за налаштування збірки. Можемо взагалі нічого не змінювати, але все ж ця строка допоможе трохи оптимізувати наш застосунок.
+
+```
+plugins:
+  - serverless-plugin-include-dependencies
+  - serverless-plugin-common-excludes
+```
+В секцію `plugins` потрапляє перелік всіх доповнень, які використовує застосунок. Вам достатньо вписати їх сюди й вони почнуть діяти.
+
+Також ми пишемо `configValidationMode: error` щоб усунути попередження про деприкацію й зробити щоб наш проєкт не завантажувався, якщо yml містить неправильні назви полів. Інколи доведеться відключити. Наприклад, якщо працюєте з плагінами, що потребують своїх полів. В секцію кастом все одно можна додати будь-що.
+
+```
+functions:
+  create:
+    handler: dist/functions/create.handler
+    events:
+      - http:
+          path: /category
+          method: post
+          request:
+            schemas:
+              application/json: ${file(schemas/requests/createSchema.json)}
+```
+Секція `functions` доволі важлива, адже саме тут ми прив'язуємо функції до івентів. Сюди ж можна додати схему для валідації запиту й не переживати про це в подальшому.
+
+```
+resources:
+  Resources:
+    MyDB: ${file(resources/database.yml)}
+    MyAccessPolicy: ${file(resources/accessPolicy.yml)}
+```
+`resources`, як бачите, відповідає за все інше, що потрібно створити проєкту. Це бази даних, політики, віртуальні підмережі, кластери й, напевне, все, що ви можете створити в хмарній консолі амазону. Оскільки записи досить об'ємні, я вирішив винести їх окремими файлами.
+
+```
+Type: AWS::RDS::DBInstance
+Properties:
+  DBInstanceIdentifier: ${self:custom.DB_NAME}
+  MasterUsername: ${self:custom.DB_USER}
+  MasterUserPassword: ${self:custom.DB_PASSWORD}
+  AllocatedStorage: 20
+  DBName: ${self:custom.DB_NAME}
+  DBInstanceClass: db.t2.micro
+  Engine: mysql
+  EngineVersion: "8.0"
+  PubliclyAccessible: true
+  VPCSecurityGroups:
+    - !GetAtt MyAccessPolicy.GroupId
+```
+Тут ми створюємо базу даних. Точніше, проксі для неї й тому вона буде доступна не лише локально. Але потрібно додати Security group, щоб не блокувався доступ ззовні. Фактично, можна зробити базу доступною лише зсередини мережі, але тоді вам доведеться працювати з Private Clouds, можливо маршрутизацією, а у нас не ОКСМ.
+
+```
+Type: AWS::EC2::SecurityGroup
+Properties:
+  GroupName: allow-all
+  GroupDescription: Allow MySQL Access
+  SecurityGroupIngress:
+    - IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      CidrIp: 0.0.0.0/0 
+```
+Так можна вирішити цю проблему й достукатись до бази даних. Тепер ви зможете підключитись до неї навіть з консолі й конфігурувати її й так, але тоді треба видобути посилання на проксі. Ну, в моєму проєкті для цього можна використати `env`.
+
+### Зверніть увагу
+З приводу відступів. Взагалі, прийнято не робити відступи всередині секцій і один відступ між ними. Мої переходи зроблені для зручності й наочності, але не є загальноприйнятими в yml.
+
+## Наповнення
+Для початку потрібно створити декілька функцій, що будуть викликатись при певних шляхах. Оскільки ми використовуємо тайпскрипт, а функції експортуються з окремих файлів, нам треба зазначити типи також. Тому, чорновий варіант файлу функції виглядатиме так:
+```
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: 'OK' }),
+  }
+}
+```
+Тобто, з файлу експортується функція з визначеною сигнатурою. Відправку відповіді ви бачите: обьєкт з полями коду й тіла. Останнє має бути строкою, з якої можна випарсити json.
+
+```
+const { param } = JSON.parse(event.body)
+const id = event.pathParameters?.id
+```
+Тут показано як діставати параметри тіла й шляху відповідно. Тобто, тіло запиту теж представляє собою строку.
+
+```
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+
+export default (func: (event: APIGatewayProxyEvent) => Promise<APIGatewayProxyResult>) => async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  try {
+    return await func(event)
+  }
+  catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: 'Internal Server Error',
+        info: error.message,
+      }),
+    }
+  }
+}
+```
+Ось такий страшний синтаксис я пропоную вам для обробки помилок. Тобто, якщо ви оберете мій варіант з декоратором, а не будете кожного разу це прописувати, то ваша функція виглядатиме десь так:
+```
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import errorHandler from '../errorHandler'
+
+const test = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify('OK')
+  }
+}
+
+export const handler = errorHandler(test)
+```
+### Примітки
+- Раджу винести відповіді, що зустрічаться часто, в окремий файл. Це особливо актуально, адже, як бачите, тут відповідь виглядає трохи громіздко, на відміну від того ж fastify.
+- Доступ до sql здійснюється стандартно, за допомогою звичайних засобів мови, адже ми просто хостимо базу даних з допомогою aws. Для прикладу можна зробити файл з обьєктом підключення, що й буде виконувати querries.
+  ```
+  import * as mysql from 'mysql2/promise';
+
+  export default await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  })
+  ```
+- Шеми мають стандартний синтаксис. Тобто, ви вказуєте поля запиту, їх тип, а потім окремо додаєте які є обов'язковими. Нагадую, створити її ви можете й за допомогою yml, навіть в самому `serverless.yml`
+  ```
+  {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" },
+      "description": { "type": "string" },
+      "Post_id": { "type": "number" }
+    },
+    "required": ["name", "description", "Post_id"]
+  }
+  ```
+
+## Завантажееня в хмару
+Якщо ви дійшли до цього кроку, то, скоріше за все, ви готові до відправлення проєкту в світ. Точніше, ви так думаєте. Але давайте спробуємо. Не зважаючи на те, що цьому процесу я присвятив цілий розділ, він досить простий. Достатньо написати `npx sls deploy` і чекати. Але не забувайте, що в нас тайпскрипт проєкт і потрібно якось зробити білд. Щоб не писати це кожного разу можна створити скрип в `package.json`. Ось приклад:
+  З esbuild: `node ./esbuild.conf.mjs && serverless deploy`
+  Без: `npx tsc && serverless deploy`
+```
+"test": {
+  "deploy": "*ПИШЕМО СЮДИ*"
+}
+```
+Далі залишається лише дочекатись виконання скрипта, побачити помилку, виправити її, запустити скрипт, дочекатись виконання, побачити помилку... насолоджуватись виконаним проєктом.
+
+## Тестування
+Тут все просто. Використовуйте стандартний засіб тестування API. Посилання для кожного ендпойнту будуть виведені в консоль після деплою. Може виникнути проблема з кодом 403 під час GET запитів. Тоді просто вставте посилання в браузер і буде вам щастя, адже це фактично еквівалент GET. Лише пам'ятайте, що кожен deploy змінюватиме частину посилання на ендпойнти.
+
+Важливим для тестування є й логування. Воно робиться досить легко. Просто використовуєте звичний вам `console`. Правда воно, звичайно, не з'явиться прямо в терміналі, але логи функції можна побачити за допомогою `npx sls logs -f` і ім'я функції.
