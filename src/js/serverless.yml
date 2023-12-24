@@ -6,13 +6,6 @@ provider:
   runtime: nodejs20.x
   region: eu-central-1
   stage: dev
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action:
-            - lambda:InvokeFunction
-          Resource: "*"
   environment:
     DB_NAME: ${self:custom.DB_NAME}
     DB_USER: ${self:custom.DB_USER}

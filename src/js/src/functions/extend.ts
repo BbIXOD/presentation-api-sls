@@ -9,7 +9,7 @@ const extend = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResul
   const { postId, categoryId } = JSON.parse(event.body)
 
   const result = await dbController
-    .query('SELECT name, description FROM category WHERE id = ? LIMIT 1', [categoryId]) as RowDataPacket[][]
+    .query('SELECT name, description FROM Category WHERE id = ? LIMIT 1', [categoryId]) as RowDataPacket[][]
 
   if (result[0].length === 0) return NotFound
 

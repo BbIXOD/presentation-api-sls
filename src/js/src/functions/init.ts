@@ -6,8 +6,7 @@ import errorHandler from '../errorHandler.js'
 
 const path = 'resources/mydb.sql'
 
-const init =  async (_event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-
+const init = async (_event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const querryData = readFileSync(path, 'utf8')
   await querryFile(querryData)
 

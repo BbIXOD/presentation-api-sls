@@ -1,9 +1,9 @@
-import dbController from "./dbController.js"
+import dbController from './dbController.js'
 
 export default async (text: string) => {
   const querries = text.split(';')
-  querries
-    .filter(query => query.length > 0)
+  const prepared = querries
     .map(query => query.trim())
-  for (const query of querries) await dbController.query(query)
+    .filter(query => query.length > 0)
+  for (const query of prepared) await dbController.query(query)
 }

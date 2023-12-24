@@ -8,7 +8,7 @@ const getAll = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResul
 
   return {
     statusCode: 200,
-    body: JSON.stringify(rows),
+    body: JSON.stringify(rows)
   }
 }
 

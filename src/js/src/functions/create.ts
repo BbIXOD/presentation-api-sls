@@ -3,7 +3,7 @@ import dbController from '../dbController.js'
 import CreateNew from '../answers/CreateNew.js'
 import errorHandler from '../errorHandler.js'
 
-const create =  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+const create = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const rowsFieldWithMaxId = 'MAX(Category_id)'
 
   const { name, description, Post_id: postId } = JSON.parse(event.body)
